@@ -1,3 +1,34 @@
+
+## Clean/reset environment
+rm(list = ls()) 
+
+## Load packages
+install.packages("phyloseq")
+install.packages("microbiome")
+install.packages("igraph")
+install.packages("qgraph")
+install.packages("SpiecEasi")
+install.packages("MCL")
+install.packages("igraphdata")
+install.packages("visNetwork")
+install.packages("ggnetwork")
+
+
+
+
+library(phyloseq)
+library(microbiome)
+library(RColorBrewer)
+library(igraph)
+library(qgraph)
+library(SpiecEasi)
+library(vegan)
+library(MCL)
+library(igraphdata)
+library(visNetwork)
+library(ggnetwork)
+
+
 ## Create new working directory
 dir.create("Food"); setwd("Food")
 
@@ -15,6 +46,55 @@ list.files()
 # "tax_table.tsv"    
 # "tree.nwk"  
 setwd("../")
+
+## Function twee - a plain text listing of directories
+## similar to tree in linux
+dir.create("Scripts"); setwd("Scripts")
+twee.url <- "https://www.gdc-docs.ethz.ch/MDA/scripts/twee.R"
+utils::download.file(twee.url, destfile = "twee.R")
+source("twee.R")
+setwd("../")
+
+## Show diretories
+twee("MDA/")
+
+## Import from biom
+biomfile <- "chaillou.biom"
+treefile <- "tree.nwk"
+food <- import_biom("C:/Users/michi/Documents/PhD/R tutorials/food/chaillou.biom", 
+                    parseFunction = parse_taxonomy_greengenes)
+phy_tree(food) <- read_tree("C:/Users/michi/Documents/PhD/R tutorials/food/tree.nwk")
+food
+## Verify Import
+food
+# otu_table()   OTU Table:         [ 508 taxa and 64 samples ]
+# sample_data() Sample Data:       [ 64 samples by 3 sample variables ]
+# tax_table()   Taxonomy Table:    [ 508 taxa by 7 taxonomic ranks ]
+# phy_tree()    Phylogenetic Tree: [ 508 tips and 507 internal nodes ]
+
+## Summary
+microbiome::summarize_phyloseq(food)
+
+## Variables
+sample_data(food)
+
+## French to English
+dictionary = c("BoeufHache"      = "Ground_Beef", 
+               "VeauHache"       = "Ground_Veal", 
+               "MerguezVolaille" = "Poultry_Sausage", 
+               "DesLardons"      = "Bacon_Dice", 
+               "SaumonFume"      = "Smoked_Salmon", 
+               "FiletSaumon"     = "Salmon_Fillet", 
+               "FiletCabillaud"  = "Cod_Fillet", 
+               "Crevette"        = "Shrimp")
+env_type <- sample_data(food)$EnvType
+sample_data(food)$EnvType <- factor(dictionary[env_type], levels = dictionary)
+
+## Add Sample ID
+sample_data(food)$SID <- sample_names(food)
+
+## Save / Load
+save.image("food.Rdata")
 
 
 ### ============================================= ###
@@ -36,33 +116,6 @@ setwd("../")
 # degree: the number of edges connecting each node to the rest of the network
 
 #### Get Ready ----
-
-## Clean/reset environment
-rm(list = ls()) 
-
-## Load packages
-install.packages("phyloseq")
-install.packages("microbiome")
-install.packages("igraph")
-install.packages("qgraph")
-install.packages("SpiecEasi")
-install.packages("MCL")
-install.packages("igraphdata")
-install.packages("visNetwork")
-install.packages("ggnetwork")
-
-library(phyloseq)
-library(microbiome)
-library(RColorBrewer)
-library(igraph)
-library(qgraph)
-library(SpiecEasi)
-library(vegan)
-library(MCL)
-library(igraphdata)
-library(visNetwork)
-library(ggnetwork)
-
 
 ### Example Food Data ----
 
@@ -281,16 +334,16 @@ food.sparcc <- sparcc(food.otu, iter = 20, inner_iter = 10, th = 0.1)
 boxplot(food.sparcc)
 
 sparcc.cutoff   <- 0.3
-food.sparcc.adj <- ifelse(abs(food.sparcc$Cor) >= sparcc.cutoff, 1, 0)
+sparcc.adj <- ifelse(abs(food.sparcc$Cor) >= sparcc.cutoff, 1, 0)
 
 ## Add OTU names to rows and columns
 rownames(sparcc.adj) <- colnames(food.otu)
 colnames(sparcc.adj) <- colnames(food.otu)
 
 ## Build network from adjacency
-food.sparcc.adj.ig <- graph.adjacency(food.sparcc.adj, mode = "undirected", diag = FALSE)
+sparcc.adj.ig <- graph.adjacency(sparcc.adj, mode = "undirected", diag = FALSE)
 
-plot.igraph(food.sparcc.adj.ig, layout = co, asp = 0, 
+plot.igraph(sparcc.adj.ig, layout = co, asp = 0, 
             main = "Food: Meat/Seafood", sub = "Correlation: SPARCC with 0.3 cutoff",
             ## nodes =======================================
             vertex.label  = as.character(get_variable(food.s, "EnvType")),
